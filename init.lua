@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -102,7 +102,8 @@ vim.g.have_nerd_font = false
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -271,6 +272,11 @@ require('lazy').setup({
   -- options to `gitsigns.nvim`.
   --
   -- See `:help gitsigns` to understand what the configuration keys do
+
+  {
+    'sainnhe/gruvbox-material',
+    priority = 1000, -- load before UI stuff
+  },
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
     opts = {
@@ -284,6 +290,19 @@ require('lazy').setup({
     },
   },
 
+  -- {
+  --   'neanias/everforest-nvim',
+  --   version = false,
+  --   lazy = false,
+  --   priority = 1000, -- make sure to load this before all the other start plugins
+  --   -- Optional; default configuration will be used if setup isn't called.
+  --   config = function()
+  --     require('everforest').setup {
+  --       background = 'hard',
+  --     }
+  --   end,
+  -- },
+  --
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
   -- This is often very useful to both group configuration, as well as handle
@@ -630,31 +649,60 @@ require('lazy').setup({
       -- See :help vim.diagnostic.Opts
       vim.diagnostic.config {
         severity_sort = true,
-        float = { border = 'rounded', source = 'if_many' },
+        float = {
+          border = 'rounded',
+          source = 'if_many',
+          max_width = 80, -- Limit width to avoid wrapping issues
+          focusable = false, -- Non-focusable like Helix popups
+          anchor = 'NE', -- Top-right corner (North-East)
+          style = 'minimal', -- Minimal padding
+          header = '', -- No header for cleaner look
+          prefix = '', -- No prefix in float
+        },
         underline = { severity = vim.diagnostic.severity.ERROR },
-        signs = vim.g.have_nerd_font and {
+        signs = {
           text = {
             [vim.diagnostic.severity.ERROR] = '󰅚 ',
             [vim.diagnostic.severity.WARN] = '󰀪 ',
             [vim.diagnostic.severity.INFO] = '󰋽 ',
             [vim.diagnostic.severity.HINT] = '󰌶 ',
           },
-        } or {},
+        },
         virtual_text = {
           source = 'if_many',
           spacing = 2,
+          prefix = '●', -- Short icon to reduce clutter
+          severity = { min = vim.diagnostic.severity.WARN }, -- Show only errors+warnings
           format = function(diagnostic)
-            local diagnostic_message = {
-              [vim.diagnostic.severity.ERROR] = diagnostic.message,
-              [vim.diagnostic.severity.WARN] = diagnostic.message,
-              [vim.diagnostic.severity.INFO] = diagnostic.message,
-              [vim.diagnostic.severity.HINT] = diagnostic.message,
-            }
-            return diagnostic_message[diagnostic.severity]
+            -- Truncate virtual text to avoid screen edge cutoff
+            local msg = diagnostic.message
+            if #msg > 30 then
+              return msg:sub(1, 27) .. '...' -- Limit to 30 chars
+            end
+            return msg
           end,
         },
       }
-
+      -- Toggle diagnostic float
+      local diagnostic_float_win = nil -- Track the float window
+      vim.keymap.set('n', '<leader>dt', function()
+        if diagnostic_float_win and vim.api.nvim_win_is_valid(diagnostic_float_win) then
+          vim.api.nvim_win_close(diagnostic_float_win, true)
+          diagnostic_float_win = nil
+        else
+          local diagnostics = vim.diagnostic.get(0, { lnum = vim.api.nvim_win_get_cursor(0)[1] - 1 })
+          if #diagnostics > 0 then
+            diagnostic_float_win = vim.diagnostic.open_float(nil, {
+              scope = 'line',
+              focusable = false,
+              anchor = 'NE',
+              border = 'rounded',
+              max_width = 80,
+              close_events = { 'CursorMoved', 'InsertEnter', 'FocusLost' },
+            })
+          end
+        end
+      end, { desc = '[D]iagnostic [T]oggle' })
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
       --  When you add blink.cmp, luasnip, etc. Neovim now has *more* capabilities.
@@ -734,6 +782,44 @@ require('lazy').setup({
         },
       }
     end,
+  },
+
+  {
+    'folke/trouble.nvim',
+    opts = {}, -- for default options, refer to the configuration section for custom setup.
+    cmd = 'Trouble',
+    keys = {
+      {
+        '<leader>xx',
+        '<cmd>Trouble diagnostics toggle<cr>',
+        desc = 'Diagnostics (Trouble)',
+      },
+      {
+        '<leader>xX',
+        '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
+        desc = 'Buffer Diagnostics (Trouble)',
+      },
+      {
+        '<leader>cs',
+        '<cmd>Trouble symbols toggle focus=false<cr>',
+        desc = 'Symbols (Trouble)',
+      },
+      {
+        '<leader>cl',
+        '<cmd>Trouble lsp toggle focus=false win.position=right<cr>',
+        desc = 'LSP Definitions / references / ... (Trouble)',
+      },
+      {
+        '<leader>xL',
+        '<cmd>Trouble loclist toggle<cr>',
+        desc = 'Location List (Trouble)',
+      },
+      {
+        '<leader>xQ',
+        '<cmd>Trouble qflist toggle<cr>',
+        desc = 'Quickfix List (Trouble)',
+      },
+    },
   },
 
   { -- Autoformat
@@ -869,13 +955,16 @@ require('lazy').setup({
       -- the rust implementation via `'prefer_rust_with_warning'`
       --
       -- See :h blink-cmp-config-fuzzy for more information
-      fuzzy = { implementation = 'lua' },
+      fuzzy = { implementation = 'prefer_rust_with_warning' },
 
       -- Shows a signature help window while you type arguments for a function
       signature = { enabled = true },
     },
   },
-
+  {
+    'karb94/neoscroll.nvim',
+    opts = {},
+  },
   { -- You can easily change to a different colorscheme.
     -- Change the name of the colorscheme plugin below, and then
     -- change the command in the config to whatever the name of that colorscheme is.
@@ -1012,5 +1101,292 @@ require('lazy').setup({
   },
 })
 
+-- Zed Gruvbox Material Theme Configuration
+-- Based on tokiory/zed-gruvbox-material color palette
+
+-- First set up the base gruvbox-material theme
+vim.g.gruvbox_material_background = 'medium'
+vim.g.gruvbox_material_foreground = 'material'
+vim.g.gruvbox_material_enable_bold = 1
+vim.g.gruvbox_material_enable_italic = 1
+vim.g.gruvbox_material_transparent_background = 0
+vim.g.gruvbox_material_ui_contrast = 'high'
+
+-- Apply the base theme
+vim.cmd.colorscheme 'gruvbox-material'
+
+-- Custom highlights to match Zed's Gruvbox Material theme
+vim.api.nvim_create_autocmd('ColorScheme', {
+  pattern = 'gruvbox-material',
+  callback = function()
+    -- Get the background color from gruvbox-material theme so presets work
+    local bg_color = vim.fn.synIDattr(vim.fn.hlID 'Normal', 'bg')
+
+    -- Color palette from Zed's Gruvbox Material theme (exact colors from JSON)
+    local colors = {
+      -- Background colors (using theme's bg instead of hardcoded values)
+      bg = bg_color,
+      surface = bg_color,
+      elevated_surface = '#3c3836',
+      element_bg = bg_color,
+      element_hover = '#3c3836',
+      element_active = '#45403d',
+      element_selected = '#504945',
+
+      -- Foreground colors
+      fg = '#d4be98', -- text
+      fg_muted = '#c5b18d', -- text.muted
+      fg_disabled = '#928374', -- text.disabled/placeholder
+
+      -- Accent and UI colors
+      accent = '#7daea3', -- text.accent/icon.accent
+      border = '#504945',
+      border_variant = bg_color,
+      line_number = '#7c6f64',
+      active_line = '#3c3836', -- editor.active_line.background (lighter for soft)
+      highlighted_line = '#45403d', -- editor.highlighted_line.background
+      search_match = '#504945', -- search.match_background
+
+      -- Syntax colors (from syntax section in JSON)
+      red = '#ea6962', -- property, enum, title, error
+      green = '#a9b665', -- string, text.literal, success
+      yellow = '#d8a657', -- modified, warning
+      blue = '#7daea3', -- attribute, keyword, label, tag, emphasis
+      purple = '#d3869b', -- constant, predictive, variable.special
+      cyan = '#89b482', -- constructor, function, operator, type, variant
+      orange = '#e78a4e', -- (from players array)
+
+      -- Status and semantic colors
+      error = '#ea6962',
+      warning = '#d8a657',
+      info = '#7daea3',
+      hint = '#68948a', -- hint color from syntax
+      success = '#a9b665',
+
+      -- Comment colors
+      comment = '#7c6f64', -- comment
+      comment_doc = '#928374', -- comment.doc
+
+      -- Terminal colors (from terminal section)
+      term_black = '#292828',
+      term_red = '#ea6962',
+      term_green = '#a9b665',
+      term_yellow = '#d8a657',
+      term_blue = '#7daea3',
+      term_magenta = '#d3869b',
+      term_cyan = '#89b482',
+      term_white = '#d4be98',
+      term_bright_black = '#5a524c',
+    }
+
+    -- Set terminal colors to match Zed exactly
+    vim.g.terminal_color_0 = colors.term_black
+    vim.g.terminal_color_1 = colors.term_red
+    vim.g.terminal_color_2 = colors.term_green
+    vim.g.terminal_color_3 = colors.term_yellow
+    vim.g.terminal_color_4 = colors.term_blue
+    vim.g.terminal_color_5 = colors.term_magenta
+    vim.g.terminal_color_6 = colors.term_cyan
+    vim.g.terminal_color_7 = colors.term_white
+    vim.g.terminal_color_8 = colors.term_bright_black
+    vim.g.terminal_color_9 = colors.term_red
+    vim.g.terminal_color_10 = colors.term_green
+    vim.g.terminal_color_11 = colors.term_yellow
+    vim.g.terminal_color_12 = colors.term_blue
+    vim.g.terminal_color_13 = colors.term_magenta
+    vim.g.terminal_color_14 = colors.term_cyan
+    vim.g.terminal_color_15 = colors.term_white
+
+    -- Define custom highlights that match Zed's implementation exactly
+    local highlights = {
+      -- Editor base
+      Normal = { fg = colors.fg, bg = colors.bg },
+      NormalFloat = { fg = colors.fg, bg = colors.elevated_surface },
+      NormalNC = { fg = colors.fg, bg = colors.bg },
+
+      -- Cursor and lines
+      CursorLine = { bg = colors.active_line },
+      CursorColumn = { bg = colors.active_line },
+      LineNr = { fg = colors.line_number, bg = colors.bg },
+      CursorLineNr = { fg = colors.fg, bg = colors.active_line },
+
+      -- Visual selection
+      Visual = { bg = colors.element_selected },
+      VisualNOS = { bg = colors.element_selected },
+
+      -- Search
+      Search = { bg = colors.search_match },
+      IncSearch = { fg = colors.bg, bg = colors.yellow },
+      CurSearch = { fg = colors.bg, bg = colors.orange },
+
+      -- Syntax highlighting (exactly matching Zed's JSON syntax colors)
+      Comment = { fg = colors.comment, italic = true },
+
+      -- Keywords and control flow (keyword color from JSON)
+      Keyword = { fg = colors.blue, italic = true },
+      Conditional = { fg = colors.blue, italic = true },
+      Repeat = { fg = colors.blue, italic = true },
+      Statement = { fg = colors.blue, italic = true },
+      Include = { fg = colors.blue, italic = true },
+
+      -- Functions and methods (function color from JSON)
+      Function = { fg = colors.cyan },
+      ['@function'] = { fg = colors.cyan },
+      ['@method'] = { fg = colors.cyan },
+      ['@function.call'] = { fg = colors.cyan },
+      ['@function.builtin'] = { fg = colors.cyan },
+
+      -- Types and constructors (type and constructor colors from JSON)
+      Type = { fg = colors.cyan },
+      ['@type'] = { fg = colors.cyan },
+      ['@type.builtin'] = { fg = colors.cyan },
+      ['@constructor'] = { fg = colors.cyan },
+      StorageClass = { fg = colors.cyan },
+      Structure = { fg = colors.cyan },
+      Typedef = { fg = colors.cyan },
+
+      -- Variables and identifiers (variable and primary colors from JSON)
+      Identifier = { fg = colors.fg },
+      ['@variable'] = { fg = colors.fg },
+      ['@parameter'] = { fg = colors.fg },
+
+      -- Properties and fields (property color from JSON)
+      ['@property'] = { fg = colors.red },
+      ['@field'] = { fg = colors.red },
+
+      -- Strings (string color from JSON)
+      String = { fg = colors.green },
+      ['@string'] = { fg = colors.green },
+      ['@string.escape'] = { fg = colors.fg_disabled }, -- string.escape from JSON
+      ['@string.regex'] = { fg = colors.purple }, -- string.regex from JSON
+      ['@string.special'] = { fg = colors.purple }, -- string.special from JSON
+
+      -- Numbers and booleans (number and boolean colors from JSON)
+      Number = { fg = colors.purple },
+      Boolean = { fg = colors.purple },
+      ['@boolean'] = { fg = colors.purple },
+      ['@number'] = { fg = colors.purple },
+      Float = { fg = colors.purple },
+
+      -- Constants (constant color from JSON)
+      Constant = { fg = colors.purple },
+      ['@constant'] = { fg = colors.purple },
+      ['@constant.builtin'] = { fg = colors.purple },
+
+      -- Operators and punctuation (operator and punctuation colors from JSON)
+      Operator = { fg = colors.cyan },
+      ['@operator'] = { fg = colors.cyan },
+      Delimiter = { fg = colors.fg_muted }, -- punctuation.delimiter from JSON
+      ['@punctuation.delimiter'] = { fg = colors.fg_muted },
+      ['@punctuation.bracket'] = { fg = colors.fg_muted },
+      ['@punctuation.special'] = { fg = colors.fg_muted },
+
+      -- Tags and attributes (tag and attribute colors from JSON)
+      Tag = { fg = colors.blue },
+      ['@tag'] = { fg = colors.blue },
+      ['@tag.attribute'] = { fg = colors.blue },
+      ['@attribute'] = { fg = colors.blue },
+
+      -- Emphasis and titles (from JSON emphasis and title)
+      ['@text.title'] = { fg = colors.red },
+      ['@text.emphasis'] = { fg = colors.blue },
+      ['@text.strong'] = { fg = colors.purple, bold = true }, -- emphasis.strong from JSON
+      ['@text.literal'] = { fg = colors.green }, -- text.literal from JSON
+      Title = { fg = colors.red },
+
+      -- Special variables (variable.special from JSON)
+      ['@variable.builtin'] = { fg = colors.purple },
+      Special = { fg = colors.purple },
+      SpecialChar = { fg = colors.purple },
+
+      -- Enums (enum color from JSON)
+      ['@lsp.type.enum'] = { fg = colors.red },
+      ['@lsp.type.enumMember'] = { fg = colors.red },
+
+      -- Labels (label color from JSON)
+      Label = { fg = colors.blue },
+      ['@label'] = { fg = colors.blue },
+
+      -- Preprocessor (preproc color from JSON)
+      PreProc = { fg = colors.fg },
+      ['@preproc'] = { fg = colors.fg },
+      Define = { fg = colors.fg },
+      Macro = { fg = colors.fg },
+
+      -- Comments with proper styling (comment.doc from JSON)
+      ['@comment.documentation'] = { fg = colors.comment_doc, italic = true, bold = true },
+      SpecialComment = { fg = colors.comment_doc, italic = true, bold = true },
+
+      -- UI Elements
+      StatusLine = { fg = colors.fg, bg = colors.bg },
+      StatusLineNC = { fg = colors.fg_muted, bg = colors.bg },
+      TabLine = { fg = colors.fg_muted, bg = colors.bg },
+      TabLineFill = { fg = colors.fg_muted, bg = colors.bg },
+      TabLineSel = { fg = colors.fg, bg = colors.elevated_surface },
+
+      -- Popup menu
+      Pmenu = { fg = colors.fg, bg = colors.elevated_surface },
+      PmenuSel = { fg = colors.fg, bg = colors.element_selected },
+      PmenuSbar = { bg = colors.element_hover },
+      PmenuThumb = { bg = colors.border },
+
+      -- Borders and separators
+      VertSplit = { fg = colors.border },
+      WinSeparator = { fg = colors.border },
+      FloatBorder = { fg = colors.border, bg = colors.elevated_surface },
+
+      -- Diagnostics (using error, warning, info, hint colors from JSON)
+      DiagnosticError = { fg = colors.error },
+      DiagnosticWarn = { fg = colors.warning },
+      DiagnosticInfo = { fg = colors.info },
+      DiagnosticHint = { fg = colors.hint },
+
+      -- Git signs
+      DiffAdd = { fg = colors.success },
+      DiffChange = { fg = colors.warning },
+      DiffDelete = { fg = colors.error },
+      GitSignsAdd = { fg = colors.success },
+      GitSignsChange = { fg = colors.warning },
+      GitSignsDelete = { fg = colors.error },
+
+      -- Folds
+      Folded = { fg = colors.fg_muted, bg = colors.element_hover },
+      FoldColumn = { fg = colors.fg_muted, bg = colors.bg },
+
+      -- Other UI elements
+      MatchParen = { fg = colors.orange, bold = true },
+      Whitespace = { fg = colors.fg_disabled },
+      NonText = { fg = colors.fg_disabled },
+      SpecialKey = { fg = colors.fg_disabled },
+
+      -- Spell checking
+      SpellBad = { fg = colors.error, underline = true },
+      SpellCap = { fg = colors.warning, underline = true },
+      SpellLocal = { fg = colors.info, underline = true },
+      SpellRare = { fg = colors.hint, underline = true },
+
+      -- Terminal
+      Terminal = { fg = colors.fg, bg = colors.bg },
+    }
+
+    -- Apply all the custom highlights
+    for group, opts in pairs(highlights) do
+      vim.api.nvim_set_hl(0, group, opts)
+    end
+  end,
+})
+
+-- Auto-apply theme on startup and background changes
+vim.api.nvim_create_autocmd('OptionSet', {
+  pattern = 'background',
+  callback = function()
+    vim.cmd 'colorscheme gruvbox-material'
+  end,
+})
+
+-- Apply the theme immediately
+vim.schedule(function()
+  vim.cmd 'colorscheme gruvbox-material'
+end)
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
