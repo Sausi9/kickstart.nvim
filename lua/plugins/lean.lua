@@ -13,4 +13,4 @@ return {
   opts = {
     mappings = true,
   },
-
+}
