@@ -11,4 +11,5 @@ return {
   { import = 'plugins.completion' },
   { import = 'plugins.ui' },
   { import = 'plugins.editor' },
+  { import = 'plugins.yazi' },
 }
