@@ -1,4 +1,2 @@
--- Load all configuration modules
-require 'config.options'
-require 'config.keymaps'
-require 'config.autocmds'
+-- Backward-compat shim: load core modules from the new layout.
+return require 'core'

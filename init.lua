@@ -8,32 +8,29 @@ organized into logical modules for easier maintenance and extension.
 
 Structure:
   lua/
-  ├── config/           - Core Neovim configuration
+  ├── core/             - Core Neovim configuration
   │   ├── options.lua   - Editor options (vim.o settings)
   │   ├── keymaps.lua   - Key mappings
   │   └── autocmds.lua  - Autocommands
   ├── plugins/          - Plugin specifications
-  │   ├── init.lua      - Plugin loader
-  │   ├── colorscheme.lua
-  │   ├── completion.lua
-  │   ├── editor.lua
-  │   ├── lsp.lua
+  │   ├── init.lua      - Plugin import list
   │   ├── telescope.lua
   │   ├── treesitter.lua
-  │   └── ui.lua
+  │   ├── nvim-lspconfig.lua
+  │   └── ...           - One file per plugin
   └── themes/           - Custom theme configurations
       └── gruvbox-material.lua
 
 To add new plugins:
-  - Create a new file in lua/plugins/ or add to an existing one
-  - Each file should return a table (or array of tables) with plugin specs
+  - Create a new file in lua/plugins/
+  - Each file should return one plugin spec table
   - Import it in lua/plugins/init.lua
 
 See `:help lazy.nvim` for plugin configuration details.
 --]]
 
 -- Load core configuration
-require 'config'
+require 'core'
 
 -- [[ Install lazy.nvim plugin manager ]]
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'

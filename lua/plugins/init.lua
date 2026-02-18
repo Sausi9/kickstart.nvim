@@ -1,15 +1,27 @@
--- [[ Plugin Specifications ]]
--- This file aggregates all plugin specs from the plugins/ directory
--- Each file in plugins/ returns a table (or array of tables) with plugin specs
-
 return {
-  -- Load all plugin modules
-  { import = 'plugins.colorscheme' },
+  -- Colorschemes
+  { import = 'plugins.gruvbox-material' },
+  { import = 'plugins.gruvbox' },
+  { import = 'plugins.tokyonight' },
+  { import = 'plugins.zenbones' },
+
+  -- Core editing experience
   { import = 'plugins.telescope' },
   { import = 'plugins.treesitter' },
-  { import = 'plugins.lsp' },
-  { import = 'plugins.completion' },
-  { import = 'plugins.ui' },
-  { import = 'plugins.editor' },
+  { import = 'plugins.lazydev' },
+  { import = 'plugins.luasnip' },
+  { import = 'plugins.blink-cmp' },
+  { import = 'plugins.mason' },
+  { import = 'plugins.fidget' },
+  { import = 'plugins.nvim-lspconfig' },
+  { import = 'plugins.which-key' },
+  { import = 'plugins.trouble' },
+  { import = 'plugins.conform' },
+  { import = 'plugins.todo-comments' },
+  { import = 'plugins.vim-tpipeline' },
+  { import = 'plugins.neoscroll' },
+  { import = 'plugins.mini' },
+  { import = 'plugins.gitsigns' },
+  { import = 'plugins.flash' },
   { import = 'plugins.yazi' },
 }
