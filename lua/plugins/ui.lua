@@ -103,4 +103,7 @@ return {
     dependencies = { 'nvim-lua/plenary.nvim' },
     opts = { signs = false },
   },
+  {
+    'vimpostor/vim-tpipeline',
+  },
 }

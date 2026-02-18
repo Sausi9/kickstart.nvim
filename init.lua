@@ -35,7 +35,6 @@ See `:help lazy.nvim` for plugin configuration details.
 -- Load core configuration
 require 'config'
 
-
 -- [[ Install lazy.nvim plugin manager ]]
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
